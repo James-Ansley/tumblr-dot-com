@@ -131,45 +131,27 @@ Params:
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
-#### Poll Info
-
-```
-def get_polls_from_post(self,
-                        post_id: Any) -> Iterator[Mapping[str, Any]]
-```
-
-Params:
-
-- post_id – The post that contains the poll
-
-Returns an iterator of the poll block mappings – this is NOT a regular JSON
-encoded response and instead is the poll data directly.
-
-This function returns an iterator as, try as tumblr might, it seems multiple
-polls can be added to posts.
-
-Raises:
-
-- HTTPError – if the request fails
-- ValueError – if the post does not contain any poll
-
 #### Poll Results
 
 ```
 def poll_results(self,
                  post_id: str | int,
-                 poll_id: str) -> Mapping[str, Any]
+                 poll_id: str
+                 blog: str | None = None) -> Mapping[str, Any]
 ```
 
 Returns a result that contains a mapping of poll answer client_ids to the votes
 for that answer (under the key "results").
 Use the `utils.zip_poll_with_results` function to combine this with the poll
 data.
+Use the `utils.get_polls_from_post` function to get the poll data (which
+contains the poll ID) from a post.
 
 Params:
 
 - post_id – The post that contains the poll
 - poll_id – AKA the poll client_id
+- blog – The blog for the post – defaults to the blog given to the tumblr object
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
@@ -245,6 +227,21 @@ Raises a ValueError if the option_uuids are given does not match the number of
 options.
 
 ### `tumblr.utils`
+
+#### Poll Info
+
+```
+def get_polls_from_post(post_id: Any) -> Iterator[Mapping[str, Any]]
+```
+
+Params:
+
+- post_id – The post that contains the poll
+
+Returns an iterator of the poll block mappings contained in the post
+
+This function returns an iterator as, try as tumblr might, it seems multiple
+polls can be added to posts.
 
 #### Zip Polls with Poll Results
 

@@ -1,6 +1,8 @@
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from typing import Any
+
+__all__ = ["zip_poll_with_results", "get_polls_from_post"]
 
 
 def zip_poll_with_results(
@@ -27,3 +29,20 @@ def zip_poll_with_results(
         answer["votes"] = vote
     poll["total_votes"] = sum(results.values())
     return poll
+
+
+def get_polls_from_post(post: Mapping) -> Iterator[Mapping[str, Any]]:
+    """
+    Convenience function that retrieves the poll blocks from a post.
+
+    It seems it is not *impossible* to have more than one poll per post –
+    despite the tumblr client seeming to enforce this on the front-end side.
+
+    :param post: The content of the post or the response from getting a post
+    :return: An iterator of the poll block mappings
+    """
+    if "response" in post:
+        post = post["response"]
+    for block in post["content"]:
+        if block["type"] == "poll":
+            yield block
