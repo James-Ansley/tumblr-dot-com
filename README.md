@@ -59,9 +59,9 @@ response = tumblr.post(
 pprint(response)
 ```
 
-### API
+## API
 
-#### `tumblr.Tumblr`
+### `tumblr.Tumblr`
 
 ```
 def __init__(self,
@@ -80,6 +80,8 @@ Params:
 - oauth_key – AKA Token
 - oauth_secret – AKA Token Secre
 
+#### Posting
+
 ```
 def post(self,
          *,
@@ -94,6 +96,8 @@ Params:
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
+#### Post Info
+
 ```
 def get_post(self,
              post_id: str | int,
@@ -107,6 +111,8 @@ Params:
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
+#### Reblogging
+
 ```
 def reblog(self,
            *,
@@ -118,14 +124,56 @@ def reblog(self,
 
 Params:
 
-- from_id – The ID of the post to be rebloged from
-- from_blog – The blog of the post to be rebloged from
+- from_id – The ID of the post to be reblogged from
+- from_blog – The blog of the post to be reblogged from
 - content – A list of content block type Mappings
 - tags – an optional list of tags
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
-#### `tumblr.blocks`
+#### Poll Info
+
+```
+def get_polls_from_post(self,
+                        post_id: Any) -> Iterator[Mapping[str, Any]]
+```
+
+Params:
+
+- post_id – The post that contains the poll
+
+Returns an iterator of the poll block mappings – this is NOT a regular JSON
+encoded response and instead is the poll data directly.
+
+This function returns an iterator as, try as tumblr might, it seems multiple
+polls can be added to posts.
+
+Raises:
+
+- HTTPError – if the request fails
+- ValueError – if the post does not contain any poll
+
+#### Poll Results
+
+```
+def poll_results(self,
+                 post_id: str | int,
+                 poll_id: str) -> Mapping[str, Any]
+```
+
+Returns a result that contains a mapping of poll answer client_ids to the votes
+for that answer (under the key "results").
+Use the `utils.zip_poll_with_results` function to combine this with the poll
+data.
+
+Params:
+
+- post_id – The post that contains the poll
+- poll_id – AKA the poll client_id
+
+Returns a JSON encoded response or raises an HTTPError if the request fails
+
+### `tumblr.blocks`
 
 Contains the following functions:
 
@@ -156,18 +204,18 @@ def <text_subtype>(content: str, **kwargs) -> Mapping[str: Any]:
     }
 ```
 
-##### `raw_text`
+#### `raw_text`
 
 Same as `text` with no subtype
 
-##### `ordered_list`, and `unordered_list`
+#### `ordered_list`, and `unordered_list`
 
 Each takes a list of strings and returns a list of `ordered_list_item`s
 or `unordered_list_item`s respectively.
 
 Must be unpacked to be used in post content.
 
-##### `poll`
+#### `poll`
 
 ```
 def poll(
@@ -195,3 +243,22 @@ Params:
 
 Raises a ValueError if the option_uuids are given does not match the number of
 options.
+
+### `tumblr.utils`
+
+#### Zip Polls with Poll Results
+
+```
+def zip_poll_with_results(poll: Mapping[str, Any],
+                          results: Mapping[str, Any]) -> Mapping[str, Any]
+```
+
+Utility function that combines poll data with the poll results.
+Returns a new mapping with a "total_votes" key mapping to the total number of
+votes and each poll answer has a "votes" key mapping to the number of votes for
+that answer.
+
+Params:
+
+- poll – the poll block data
+- results – the result data (either the response or response data)

@@ -1,4 +1,5 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from typing import Any
 
 import requests
 from requests_oauthlib import OAuth1
@@ -38,7 +39,7 @@ class Tumblr:
             *,
             content: list[Mapping],
             tags: Iterable[str] = tuple(),
-    ) -> Mapping:
+    ) -> Mapping[str, Any]:
         """
         Makes a super-duper tumblr post to your kawaii blog UwU
 
@@ -88,7 +89,7 @@ class Tumblr:
             from_blog: str,
             content: list[Mapping],
             tags: Iterable[str] = tuple(),
-    ) -> Mapping:
+    ) -> Mapping[str, Any]:
         """
         Does a super cool reglog on tumbler dot com!! ( – 3-)
 
@@ -112,4 +113,53 @@ class Tumblr:
             "reblog_key": parent_post["response"]["reblog_key"],
             "parent_post_id": int(from_id),
         }
-        return requests.post(url=url, json=data, auth=self._auth).json()
+        request = requests.post(url=url, json=data, auth=self._auth)
+        request.raise_for_status()
+        return request.json()
+
+    def poll_results(
+            self,
+            post_id: str | int,
+            poll_id: str,
+    ) -> Mapping[str, Any]:
+        """
+        (OWO) !! Whats this? Poll results!
+
+        Not defined in the API yet – seems to return a mapping of answer
+        client_ids to the votes for each answer.
+
+        :param post_id: The post that contains the poll
+        :param poll_id: AKA the poll client_id
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
+        url = f"{self._BASE_URL}/polls/{self.blog}/{post_id}/{poll_id}/results"
+        request = requests.get(url=url, auth=self._auth)
+        request.raise_for_status()
+        return request.json()
+
+    def get_polls_from_post(self, post_id) -> Iterator[Mapping[str, Any]]:
+        """
+        Polls! The thing firefighters use instead of stairs? Nyah UwU
+
+        Convenience function that retrieves the poll blocks from a post.
+
+        It seems it is not *impossible* to have more than one poll per post –
+        despite the tumblr client seeming to enforce this on the front-end side.
+
+        :param post_id: The post that contains the poll
+        :return: An iterator of the poll block mappings – this is NOT a regular
+            JSON encoded response and instead is the poll data directly
+
+        :raises HTTPError: if the request fails
+        :raises ValueError: if the post does not contain any poll
+        """
+        post = self.get_post(post_id)
+        has_poll = False
+        for block in post["response"]["content"]:
+            if block["type"] == "poll":
+                has_poll = True
+                yield block
+        if not has_poll:
+            raise ValueError("Cannot find poll in post")
