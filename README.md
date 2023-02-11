@@ -22,8 +22,8 @@ pip install git+https://github.com/James-Ansley/tumblr-dot-com#egg=tumblrdotcom
 
 Provides a `tumblr.Tumblr` class. See https://www.tumblr.com/docs/en/api/v2 for
 API details relating to data formatting.
-
-Provides helper functions for block text in `tumblr.blocks`
+Also provides a `tumblr.Content` class to assist in generating text post
+content as well as utility functions in `tumblr.utils` to process poll data.
 
 ### Example
 
@@ -32,8 +32,7 @@ import os
 from datetime import timedelta
 from pprint import pprint
 
-from tumblr.blocks import *
-from tumblr import Tumblr
+from tumblr import Content, Tumblr
 
 tumblr = Tumblr(
     blog="pizza",  # or 'pizza.tumblr.com'
@@ -44,15 +43,29 @@ tumblr = Tumblr(
 )
 
 response = tumblr.post(
-    content=[
-        heading("Hello, World!"),
-        text("Oh boy! Isn't it great to have a tumblr!"),
-        poll(
+    content=(
+        Content()
+        .heading("Hello, World!")
+        .text("Oh boy! Isn't it great to have a tumblr!")
+        .row_of(
+            Content()
+            .image(
+                "clown_left.jpg",
+                "image/jpeg",
+                "A photo clown holding their right thumb up towards the camera"
+            )
+            .image(
+                "clown_right.jpg",
+                "image/jpeg",
+                "A photo clown holding their left thumb up towards the camera"
+            )
+        )
+        .poll(
             "Don't you think so?",
             ["Yes", "No"],
             expire_after=timedelta(days=1),
         )
-    ],
+    ),
     tags=["pizza", "I can't even remember why they were deleted"],
 )
 
@@ -85,14 +98,16 @@ Params:
 ```
 def post(self,
          *,
-         content: list[Mapping],
-         tags: Iterable[str] = tuple()) -> Mapping
+         content: Content],
+         tags: Iterable[str] = tuple(),
+         **kwargs) -> Mapping
 ```
 
 Params:
 
-- content – A list of content block type Mappings
+- content – A content object containing the post content
 - tags – an optional list of tags
+- **kwargs – any additional arguments to be passed as post data
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
@@ -155,12 +170,19 @@ Params:
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
-### `tumblr.blocks`
+### `Content`
+
+Supports the creation of text post content with method chaining. Handles image
+files, layout, and content blocks.
 
 Contains the following functions:
 
 - `poll`
-- `raw_text`
+- `ordered_list`
+- `unordered_list`
+- `image`
+- `read_more`
+- `row_of`
 - `text`
 - `heading`
 - `subheading`
@@ -168,50 +190,45 @@ Contains the following functions:
 - `quote`
 - `indented`
 - `chat`
-- `ordered_list`
 - `ordered_list_item`
-- `unordered_list`
 - `unordered_list_item`
 
-With the exception of `poll`, `raw_text`, `ordered_list`, and `unordered_list`,
-these are just text block subtypes that loosely translate to:
+All post types from `text` onward roughly translate to:
 
 ```
-def <text_subtype>(content: str, **kwargs) -> Mapping[str: Any]:
-    return {
+def <text_subtype>(self, content: str, **kwargs) -> Mapping[str: Any]:
+    ...  # snip
+    data = {
         "type": "text",
         "subtype": "<text_subtype>",
         "text": content,
         **kwargs,
     }
+    ...  # snip
+    return self
 ```
 
-#### `raw_text`
-
-Same as `text` with no subtype
+The other block types will be explained below.
 
 #### `ordered_list`, and `unordered_list`
 
-Each takes a list of strings and returns a list of `ordered_list_item`s
-or `unordered_list_item`s respectively.
-
-Must be unpacked to be used in post content.
+Each takes varargs of strings and adds a list of `ordered_list_item`s
+or `unordered_list_item`s to the content respectively.
 
 #### `poll`
 
 ```
-def poll(
-        question: str,
-        options: list[str],
-        *,
-        expire_after=timedelta(seconds=604800),
-        poll_uuid: UUID = None,
-        option_uuids: list[UUID] = None,
-) -> Mapping[str, Any]:
+def poll(self
+         question: str,
+         options: list[str],
+         *,
+         expire_after=timedelta(days=7),
+         poll_uuid: UUID = None,
+         option_uuids: list[UUID] = None) -> Self:
 ```
 
-Returns a poll content block. This is not officially documented so may be
-unstable.
+Adds a poll content block to the content. This is not officially documented so
+may be unstable.
 
 Params:
 
@@ -225,6 +242,28 @@ Params:
 
 Raises a ValueError if the option_uuids are given does not match the number of
 options.
+
+#### `read_more`
+
+Inserts a truncating "read more" block into the post.
+
+#### `image`
+
+```
+def image(self,
+          path: PurePath | str,
+          img_type: str,
+          alt_text: str,
+          caption: str | None = None) -> Self
+```
+
+Inserts an image into the text post. The image type is the images corresponding
+MIME type.
+
+#### `row_of`
+
+Takes a content object _which only contains images_ as a parameter and adds the
+images in a single row of the text post.
 
 ### `tumblr.utils`
 

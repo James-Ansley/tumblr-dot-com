@@ -1,10 +1,12 @@
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
-import requests
 from requests_oauthlib import OAuth1
 
 __all__ = ["Tumblr"]
+
+from tumblr.content import Content
+from tumblr.request import get, post
 
 
 class Tumblr:
@@ -37,7 +39,7 @@ class Tumblr:
     def post(
             self,
             *,
-            content: list[Mapping],
+            content: Content,
             tags: Iterable[str] = tuple(),
             **kwargs,
     ) -> Mapping[str, Any]:
@@ -47,22 +49,20 @@ class Tumblr:
         See:
         https://www.tumblr.com/docs/en/api/v2#posts---createreblog-a-post-neue-post-format
 
-        :param content: A list of content block type Mappings
-        :param layout:
+        :param content: the post content
         :param tags: an optional list of tags
         :return: The JSON encoded response
 
         :raises HTTPError: if the request fails
         """
         url = f"{self._BASE_URL}/blog/{self.blog}/posts"
-        data = {
-            "content": content,
+        params = {
+            "content": content.blocks,
+            "layout": content.layout,
             "tags": ", ".join(tags),
             **kwargs,
         }
-        request = requests.post(url=url, json=data, auth=self._auth)
-        request.raise_for_status()
-        return request.json()
+        return post(url, self._auth, params, content.files)
 
     def get_post(self, post_id: str | int, blog: str = None) -> Mapping:
         """
@@ -81,16 +81,14 @@ class Tumblr:
         if blog is None:
             blog = self.blog
         url = f"{self._BASE_URL}/blog/{blog}/posts/{post_id}"
-        request = requests.get(url=url, auth=self._auth)
-        request.raise_for_status()
-        return request.json()
+        return get(url, self._auth)
 
     def reblog(
             self,
             *,
             from_id: str | int,
-            from_blog: str,
-            content: list[Mapping],
+            from_blog: str = None,
+            content: Content,
             tags: Iterable[str] = tuple(),
     ) -> Mapping[str, Any]:
         """
@@ -108,17 +106,16 @@ class Tumblr:
         :raises HTTPError: if the request fails
         """
         parent_post = self.get_post(from_id, blog=from_blog)
-        url = f"{self._BASE_URL}/blog/{self.blog}/posts"
+        url = f"{self._BASE_URL}/blog/{from_blog or self.blog}/posts"
         data = {
-            "content": content,
+            "content": content.blocks,
+            "layout": content.layout,
             "tags": ", ".join(tags),
             "parent_tumblelog_uuid": parent_post["response"]["tumblelog_uuid"],
             "reblog_key": parent_post["response"]["reblog_key"],
             "parent_post_id": int(from_id),
         }
-        request = requests.post(url=url, json=data, auth=self._auth)
-        request.raise_for_status()
-        return request.json()
+        return post(url, self._auth, data, content.files)
 
     def poll_results(
             self,
@@ -143,6 +140,4 @@ class Tumblr:
         if blog is None:
             blog = self.blog
         url = f"{self._BASE_URL}/polls/{blog}/{post_id}/{poll_id}/results"
-        request = requests.get(url=url, auth=self._auth)
-        request.raise_for_status()
-        return request.json()
+        return get(url, self._auth)
