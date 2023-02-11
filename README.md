@@ -48,13 +48,12 @@ response = tumblr.post(
         .heading("Hello, World!")
         .text("Oh boy! Isn't it great to have a tumblr!")
         .row_of(
-            Content()
-            .image(
+            (
                 "clown_left.jpg",
                 "image/jpeg",
                 "A photo clown holding their right thumb up towards the camera"
-            )
-            .image(
+            ),
+            (
                 "clown_right.jpg",
                 "image/jpeg",
                 "A photo clown holding their left thumb up towards the camera"
@@ -262,8 +261,8 @@ MIME type.
 
 #### `row_of`
 
-Takes a content object _which only contains images_ as a parameter and adds the
-images in a single row of the text post.
+Takes varargs of image data. image data can either be a mapping of image param
+names to values, or an iterable of the image params.
 
 ### `tumblr.utils`
 

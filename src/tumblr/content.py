@@ -1,7 +1,8 @@
+from collections.abc import Mapping
 from datetime import timedelta
 from os import PathLike
 from pathlib import PurePath
-from typing import Self
+from typing import Iterable, Self
 from uuid import UUID, uuid4
 
 __all__ = ["Content"]
@@ -216,17 +217,21 @@ class Content:
             self._rows["truncate_after"] = self._idx
         return self
 
-    def row_of(self, content: "Content") -> Self:
-        for block in content.blocks:
-            if block["type"] == "image":
-                for file in block["media"]:
-                    fid = file["identifier"]
-                    new_fid = self._next_fid
-                    file |= {"identifier": new_fid}
-                    self.files[new_fid] = content.files[fid]
-            self.blocks.append(block)
-        indices = [i for i in range(self._idx - content._idx, self._idx + 1)]
-        self._display.append(_block(indices))
+    def row_of(self, *image_data: Mapping[str, str] | Iterable[str]) -> Self:
+        """
+        Creates a row of images.
+
+        :param image_data: either a mapping of image param names to values, or
+            an iterable of the image params.
+        """
+        blocks = []
+        for image in image_data:
+            if isinstance(image, Mapping):
+                self.image(**image)
+            else:
+                self.image(*image)
+            blocks.append(self._display.pop()["blocks"][0])
+        self._display.append(_block(blocks))
         return self
 
 
