@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tumblrdotcom"
 version = "0.0.1"
-description = '''Nyaa!! OwO what's this? *glomps you'''
+description = '''Nyaa!! OwO what's this? *glomps you*'''
 
 readme = "README.md"
 requires-python = ">=3.11"

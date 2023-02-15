@@ -1,6 +1,5 @@
 from collections.abc import Mapping
 from datetime import timedelta
-from os import PathLike
 from pathlib import PurePath
 from typing import Iterable, Self
 from uuid import UUID, uuid4
@@ -184,11 +183,22 @@ class Content:
         return self
 
     def image(
-            self, path: PurePath | str,
+            self,
+            path: PurePath | str,
             img_type: str,
             alt_text: str,
             caption: str = None
     ) -> Self:
+        """
+        An Image block.
+
+        See: https://www.tumblr.com/docs/npf#content-block-type-image
+
+        :param path: The path to the image
+        :param img_type: The image MIME type
+        :param alt_text: Image Alt Text
+        :param caption: Optional Caption (display under image when viewed)
+        """
         fid = self._next_fid
         file = open(path, "rb")
         self.files[fid] = (fid, file, img_type)

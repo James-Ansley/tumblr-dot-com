@@ -12,10 +12,8 @@ Includes support for polls.
 
 ## Install
 
-Install from git:
-
 ```
-pip install git+https://github.com/James-Ansley/tumblr-dot-com#egg=tumblrdotcom
+pip install tumblrdotcom
 ```
 
 ## Usage
@@ -90,7 +88,7 @@ Params:
 - client_key – AKA Consumer Key
 - client_secret – AKA Consumer Secret
 - oauth_key – AKA Token
-- oauth_secret – AKA Token Secre
+- oauth_secret – AKA Token Secret
 
 #### Posting
 
@@ -195,7 +193,7 @@ Contains the following functions:
 All post types from `text` onward roughly translate to:
 
 ```
-def <text_subtype>(self, content: str, **kwargs) -> Mapping[str: Any]:
+def <text_subtype>(self, content: str, **kwargs) -> Self:
     ...  # snip
     data = {
         "type": "text",
