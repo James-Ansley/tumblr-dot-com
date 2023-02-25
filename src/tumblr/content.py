@@ -2,9 +2,10 @@ from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import PurePath
 from typing import Iterable, Self
-from uuid import UUID, uuid4
 
 __all__ = ["Content"]
+
+from uuid import uuid4
 
 
 class Content:
@@ -140,37 +141,31 @@ class Content:
             options: list[str],
             *,
             expire_after=timedelta(days=7),
-            poll_uuid: UUID = None,
-            option_uuids: list[UUID] = None,
     ) -> Self:
         """
         A poll content block.
         This is not officially documented yet so who knows if it's going to
         change!
 
+        .. note::
+            - expire_after is clamped between 1 and 7 days serverside
+            - Only one poll can be in each post and this is enforced serverside
+            - At least 2 and at most 10 options can be provided each having a
+              max of 80 characters.
+
         :param question: The Poll prompt
         :param options: The poll options
         :param expire_after: a time delta of when the poll will close
             (default 7 days)
-        :param poll_uuid: an optional UUID4 – one will be generated if not given
-        :param option_uuids: an optional list of UUID4s – a list will be
-            generated if not given. Raises a Value error if the number of
-            options does not match the number of given option UUIDs
-
-        :raises ValueError: If the number of option_uuids given does not match
-            the number of options.
         """
-        if option_uuids is None:
-            option_uuids = [uuid4() for _ in options]
         poll_data = {
             "type": "poll",
             "question": question,
-            "client_id": str(uuid4() if poll_uuid is None else poll_uuid),
+            # must be provided in request but are now ignored
+            "client_id": str(uuid4()),
             "answers": [
-                {"answer_text": answer,
-                 "client_id": str(answer_uuid)}
-                for answer, answer_uuid in
-                zip(options, option_uuids, strict=True)
+                {"answer_text": answer, "client_id": str(uuid4())}
+                for answer in options
             ],
             'settings': {
                 'close_status': 'closed-after',

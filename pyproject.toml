@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tumblrdotcom"
-version = "0.0.1"
+version = "0.1.0"
 description = '''Nyaa!! OwO what's this? *glomps you*'''
+keywords = ["Tumblr", "API"]
 
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file = "LICENSE" }
+license = {text = "MIT License"}
 classifiers = [
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",

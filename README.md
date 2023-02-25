@@ -10,6 +10,26 @@ project I am working on. Currently, a WIP but still usable.
 
 Includes support for polls.
 
+```text
+ ______________________________________________________________ 
+/ Note: Tumblr has patched much of the wacky poll behaviour.   \
+| Those zany polls that double count votes or last 50 years    |
+| have sadly been zapped. Blasted from existence. Now, not to  |
+| equate this with the burning of Library of Alexandria or     |
+| anything but it definitely evokes some strong emotions. You  |
+| can't even have more than one poll per post anymore. Read    |
+| the changelog for details of how this has affected tumblr-   |
+| dot-com and the types of polls you can create. And remember, |
+| even if you're dusted, you may be gone. But out here in the  |
+\ desert your shadow lives on without you.                     /
+ -------------------------------------------------------------- 
+        \   ^__^
+         \  (xx)\_______
+            (__)\       )\/\
+             U  ||----w |
+                ||     ||
+```
+
 ## Install
 
 ```
@@ -219,9 +239,7 @@ def poll(self
          question: str,
          options: list[str],
          *,
-         expire_after=timedelta(days=7),
-         poll_uuid: UUID = None,
-         option_uuids: list[UUID] = None) -> Self:
+         expire_after=timedelta(days=7)) -> Self:
 ```
 
 Adds a poll content block to the content. This is not officially documented so
@@ -231,14 +249,8 @@ Params:
 
 - question – The Poll prompt
 - options – The poll options
-- expire_after – a time delta of when the poll will close
-- poll_uuid – an optional UUID4 – one will be generated if not given
-- option_uuids – an optional list of UUID4s – a list will be generated if not
-  given. Raises a Value error if the number of options does not match the number
-  of given option UUIDs
-
-Raises a ValueError if the option_uuids are given does not match the number of
-options.
+- expire_after – a time delta of when the poll will close (is clamped between 1
+  and 7 days serverside)
 
 #### `read_more`
 
