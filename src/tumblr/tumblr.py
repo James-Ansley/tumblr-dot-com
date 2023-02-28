@@ -90,6 +90,7 @@ class Tumblr:
             from_blog: str = None,
             content: Content,
             tags: Iterable[str] = tuple(),
+            to_blog=None,
     ) -> Mapping[str, Any]:
         """
         Does a super cool reglog on tumbler dot com!! ( – 3-)
@@ -101,12 +102,13 @@ class Tumblr:
         :param from_blog: The blog of the post to be rebloged from
         :param content: A list of content block type Mappings
         :param tags: an optional list of tags
+        :param to_blog: The blog for the reblog to be posted to
         :return: The JSON encoded response
 
         :raises HTTPError: if the request fails
         """
         parent_post = self.get_post(from_id, blog=from_blog)
-        url = f"{self._BASE_URL}/blog/{from_blog or self.blog}/posts"
+        url = f"{self._BASE_URL}/blog/{to_blog or self.blog}/posts"
         data = {
             "content": content.blocks,
             "layout": content.layout,

@@ -151,15 +151,17 @@ def reblog(self,
            from_id: str | int,
            from_blog: str,
            content: list[Mapping],
-           tags: Iterable[str] = tuple()) -> Mapping
+           tags: Iterable[str] = tuple(),
+           to_blog: str) -> Mapping
 ```
 
 Params:
 
 - from_id – The ID of the post to be reblogged from
-- from_blog – The blog of the post to be reblogged from
+- from_blog – The blog of the post to be reblogged from (defaults to self.blog)
 - content – A list of content block type Mappings
 - tags – an optional list of tags
+- to_blog – The blog this will be posted to (defaults to self.blog)
 
 Returns a JSON encoded response or raises an HTTPError if the request fails
 
