@@ -1,24 +1,32 @@
-from collections.abc import Iterable, Mapping
-from typing import Any
+"""
+Nyah~~~ A super kawaii module containing the tumblr class and post utilities
+"""
 
+import json
+from collections.abc import Iterable
+from copy import deepcopy
+from dataclasses import dataclass
+from io import StringIO
+from typing import Any, Iterator, Mapping
+
+import requests
 from requests_oauthlib import OAuth1
 
-__all__ = ["Tumblr"]
+from tumblr.content import *
 
-from tumblr.content import Content
-from tumblr.request import get, post
+__all__ = ["Tumblr", "zip_poll_with_results", "get_polls_from_post"]
 
 
 class Tumblr:
     _BASE_URL = "https://api.tumblr.com/v2"
 
     def __init__(
-            self,
-            blog: str,
-            client_key: str,
-            client_secret: str,
-            oauth_key: str,
-            oauth_secret: str,
+          self,
+          blog: str,
+          client_key: str,
+          client_secret: str,
+          oauth_key: str,
+          oauth_secret: str,
     ):
         """
         Nyaa!! OwO what's this? \*glomps you\*
@@ -37,12 +45,12 @@ class Tumblr:
         self._auth = OAuth1(client_key, client_secret, oauth_key, oauth_secret)
 
     def post(
-            self,
-            *,
-            content: Content,
-            tags: Iterable[str] = tuple(),
-            **kwargs,
-    ) -> Mapping[str, Any]:
+          self,
+          *,
+          content: Iterable[Block],
+          tags: Iterable[str] = tuple(),
+          **kwargs,
+    ) -> Mapping[str, object]:
         """
         Makes a super-duper tumblr post to your kawaii blog UwU
 
@@ -56,13 +64,14 @@ class Tumblr:
         :raises HTTPError: if the request fails
         """
         url = f"{self._BASE_URL}/blog/{self.blog}/posts"
+        content = _process_blocks(content)
         params = {
             "content": content.blocks,
             "layout": content.layout,
             "tags": ", ".join(tags),
             **kwargs,
         }
-        return post(url, self._auth, params, content.files)
+        return _post(url, self._auth, params, content.files)
 
     def get_post(self, post_id: str | int, blog: str = None) -> Mapping:
         """
@@ -81,16 +90,16 @@ class Tumblr:
         if blog is None:
             blog = self.blog
         url = f"{self._BASE_URL}/blog/{blog}/posts/{post_id}"
-        return get(url, self._auth)
+        return _get(url, self._auth)
 
     def reblog(
-            self,
-            *,
-            from_id: str | int,
-            from_blog: str = None,
-            content: Content,
-            tags: Iterable[str] = tuple(),
-            to_blog=None,
+          self,
+          *,
+          from_id: str | int,
+          from_blog: str = None,
+          content: Iterable[Block],
+          tags: Iterable[str] = tuple(),
+          to_blog=None,
     ) -> Mapping[str, Any]:
         """
         Does a super cool reglog on tumbler dot com!! ( – 3-)
@@ -109,6 +118,7 @@ class Tumblr:
         """
         parent_post = self.get_post(from_id, blog=from_blog)
         url = f"{self._BASE_URL}/blog/{to_blog or self.blog}/posts"
+        content = _process_blocks(content)
         data = {
             "content": content.blocks,
             "layout": content.layout,
@@ -117,13 +127,39 @@ class Tumblr:
             "reblog_key": parent_post["response"]["reblog_key"],
             "parent_post_id": int(from_id),
         }
-        return post(url, self._auth, data, content.files)
+        return _post(url, self._auth, data, content.files)
 
     def poll_results(
-            self,
-            post_id: str | int,
-            poll_id: str,
-            blog: str = None,
+          self,
+          post_id: str | int,
+          blog: str = None,
+    ) -> Mapping[str, Any]:
+        """
+        (OWO) !! What's this? Poll results!
+
+        Returns a poll object zipped with answer text. Finds the first poll
+        in the given post and returns its results + labels
+
+        :param post_id: The post that contains the poll
+        :param blog: The blog for the post – defaults to the blog given to the
+            tumblr object
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
+        if blog is None:
+            blog = self.blog
+        poll = next(get_polls_from_post(self.get_post(post_id)))
+        poll_id = poll["client_id"]
+        url = f"{self._BASE_URL}/polls/{blog}/{post_id}/{poll_id}/results"
+        results = _get(url, self._auth)
+        return zip_poll_with_results(poll, results)
+
+    def raw_poll_results(
+          self,
+          post_id: str | int,
+          poll_id: str,
+          blog: str = None,
     ) -> Mapping[str, Any]:
         """
         (OWO) !! Whats this? Poll results!
@@ -142,4 +178,99 @@ class Tumblr:
         if blog is None:
             blog = self.blog
         url = f"{self._BASE_URL}/polls/{blog}/{post_id}/{poll_id}/results"
-        return get(url, self._auth)
+        return _get(url, self._auth)
+
+
+def zip_poll_with_results(
+      poll: Mapping[str, Any],
+      results: Mapping[str, Any]
+) -> Mapping[str, Any]:
+    """
+    Utility function that combines poll data with the poll results.
+
+    Returns a new mapping with a "total_votes" key mapping to the total
+    number of votes and each poll answer has a "votes" key mapping to the
+    number of votes for that answer.
+
+    :param poll: the poll block data
+    :param results: the result data (either the response or response data)
+    :return: a new mapping with the poll data
+    """
+    if "response" in results:
+        results = results["response"]
+    results = results["results"]
+    poll = {**deepcopy(poll)}
+    for answer in poll["answers"]:
+        vote = results[answer["client_id"]]
+        answer["votes"] = vote
+    poll["total_votes"] = sum(results.values())
+    return poll
+
+
+def get_polls_from_post(post: Mapping) -> Iterator[Mapping[str, Any]]:
+    """
+    Convenience function that retrieves the poll blocks from a post.
+
+    :param post: The content of the post or the response from getting a post
+    :return: An iterator of the poll block mappings
+    """
+    if "response" in post:
+        post = post["response"]
+    for block in post["content"]:
+        if block["type"] == "poll":
+            yield block
+
+
+def _get(url, auth):
+    request = requests.get(url=url, auth=auth)
+    request.raise_for_status()
+    return request.json()
+
+
+def _post(url, auth, content, files):
+    if files:
+        content = StringIO(json.dumps(content))
+        files = {"json": (None, content, "application/json"), **files}
+        request = requests.post(url=url, auth=auth, files=files)
+    else:
+        request = requests.post(url=url, auth=auth, json=content)
+    request.raise_for_status()
+    return request.json()
+
+
+@dataclass
+class _Content:
+    blocks: Iterable[Mapping]
+    layout: list[Mapping]
+    files: Mapping
+
+
+def _process_blocks(blocks: Iterable[Block]) -> _Content:
+    block_data = []
+    layout = {"type": "rows", "display": []}
+    files = {}
+    for block in blocks:
+        new_blocks = []
+        match block:
+            case ContentBlock() as content:
+                new_blocks = [content.data()]
+            case MultiBlock() as multi:
+                new_blocks = [b.data for b in multi.data]
+            case DataBlock() as data:
+                new_blocks = [data.data()]
+                files |= data.file()
+            case ReadMore():
+                layout["truncate_after"] = len(block_data) - 1
+            case Row(images=images):
+                for image in images:
+                    new_blocks.append(image.data())
+                    files |= image.file()
+        if new_blocks:
+            block_layout = [i + len(block_data) for i in range(len(new_blocks))]
+            layout["display"].append({"blocks": block_layout})
+            block_data.extend(new_blocks)
+    return _Content(
+        blocks=block_data,
+        layout=[layout],
+        files=files,
+    )

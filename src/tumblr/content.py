@@ -1,253 +1,311 @@
-from collections.abc import Mapping
+"""
+OwO !! What's this?! A sugoi way to make post content UwU Nyah!
+"""
+
+import abc
+from collections.abc import Iterable, Mapping
 from datetime import timedelta
+from io import BytesIO
 from pathlib import PurePath
-from typing import Iterable, Self
-
-__all__ = ["Content"]
-
 from uuid import uuid4
 
+__all__ = [
+    "Block",
+    "ContentBlock",
+    "MultiBlock",
+    "DataBlock",
+    "RawText",
+    "Text",
+    "Heading",
+    "Subheading",
+    "Cursive",
+    "Quote",
+    "Chat",
+    "OrderedListItem",
+    "UnorderedListItem",
+    "OrderedList",
+    "UnorderedList",
+    "Poll",
+    "Image",
+    "ReadMore",
+    "Row",
+]
 
-class Content:
-    def __init__(self):
-        self.blocks = []
-        self._rows = {
-            "type": "rows",
-            "display": []
-        }
-        self.files = {}
 
-    @property
-    def layout(self):
-        """The layout information of the post content"""
-        return [self._rows]
+class Block(abc.ABC):
+    ...
 
-    @property
-    def _idx(self):
-        return len(self.blocks) - 1
 
-    @property
-    def _display(self):
-        return self._rows["display"]
+class ContentBlock(Block, abc.ABC):
+    @abc.abstractmethod
+    def data(self) -> Mapping:
+        ...
 
-    @property
-    def _next_fid(self):
-        return f"data-{len(self.files):02d}"
 
-    def text(self, content, **kwargs) -> Self:
-        """
-        A Text content block with the given content.
+class MultiBlock(Block, abc.ABC):
+    @abc.abstractmethod
+    def data(self) -> Iterable[Mapping]:
+        ...
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        text_data = {
+
+class DataBlock(Block, abc.ABC):
+    def __init__(self, path: PurePath | str, mime_type: str):
+        self.path = path
+        self.mime_type = mime_type
+        self.fid = str(uuid4())
+
+    def file(self):
+        with open(self.path, "rb") as f:
+            byte_data = BytesIO(f.read())
+        return {self.fid: (self.fid, byte_data, self.mime_type)}
+
+
+class RawText(ContentBlock):
+    def __init__(self, content: str, subtype: str, **kwargs):
+        self.content = content
+        self.subtype = subtype
+        self.kwargs = kwargs
+
+    def data(self) -> Mapping:
+        return {
             "type": "text",
-            "text": content,
-            **kwargs,
+            "text": self.content,
+            "subtype": self.subtype,
+            **self.kwargs,
         }
-        self.blocks.append(text_data)
-        self._display.append(_block(self._idx))
-        return self
 
-    def heading(self, content: str, **kwargs) -> Self:
-        """
-        A Heading1 Text subtype content block with the given content.
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="heading1", **kwargs)
+class Text(ContentBlock):
+    """
+    A Text content block with the given content.
 
-    def subheading(self, content: str, **kwargs) -> Self:
-        """
-        A Heading2 Text subtype content block with the given content.
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
+    def __init__(self, content: str, **kwargs):
+        self.content = content
+        self.kwargs = kwargs
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="heading2", **kwargs)
+    def data(self):
+        return {
+            "type": "text",
+            "text": self.content,
+            **self.kwargs,
+        }
 
-    def cursive(self, content: str, **kwargs) -> Self:
-        """
-        A quirky Text subtype content block with the given content.
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="quirky", **kwargs)
+class Heading(RawText):
+    """
+    A Heading1 Text subtype content block with the given content.
 
-    def quote(self, content: str, **kwargs) -> Self:
-        """
-        A quote Text subtype content block with the given content.
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="quote", **kwargs)
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "heading1", **kwargs)
 
-    def indented(self, content: str, **kwargs) -> Self:
-        """
-        An indented Text subtype content block with the given content.
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="indented", **kwargs)
+class Subheading(RawText):
+    """
+    A Heading2 Text subtype content block with the given content.
 
-    def chat(self, content: str, **kwargs) -> Self:
-        """
-        A chat Text subtype content block with the given content.
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(content, subtype="chat", **kwargs)
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "heading2", **kwargs)
 
-    def ordered_list(self, *content: str, **kwargs) -> Self:
-        """
-        A list of ordered-list-item Text subtype content blocks with the
-        given items in the content list. Passes all kwargs onto each
-        individual list item.
-        """
-        for item in content:
-            self.ordered_list_item(item, **kwargs)
-        return self
 
-    def unordered_list(self, *content: str, **kwargs) -> Self:
-        """
-        A list of unordered-list-item Text subtype content blocks with the
-        given items in the content list. Passes all kwargs onto each
-        individual list item.
-        """
-        for item in content:
-            self.unordered_list_item(item, **kwargs)
-        return self
+class Cursive(RawText):
+    """
+    A quirky Text subtype content block with the given content.
 
-    def ordered_list_item(self, item, **kwargs) -> Self:
-        """
-        An ordered-list-item Text subtype content block with the given
-        content.
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(item, subtype="ordered-list-item", **kwargs)
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "quirky", **kwargs)
 
-    def unordered_list_item(self, item, **kwargs):
-        """
-         An unordered-list-item Text subtype content block with the given
-        content.
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-text
-        """
-        return self.text(item, subtype="unordered-list-item", **kwargs)
+class Quote(RawText):
+    """
+    A quote Text subtype content block with the given content.
 
-    def poll(
-            self,
-            question: str,
-            options: list[str],
-            *,
-            expire_after=timedelta(days=7),
-    ) -> Self:
-        """
-        A poll content block.
-        This is not officially documented yet so who knows if it's going to
-        change!
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
 
-        .. note::
-            - expire_after is clamped between 1 and 7 days serverside
-            - Only one poll can be in each post and this is enforced serverside
-            - At least 2 and at most 10 options can be provided each having a
-              max of 80 characters.
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "quote", **kwargs)
 
-        :param question: The Poll prompt
-        :param options: The poll options
-        :param expire_after: a time delta of when the poll will close
-            (default 7 days)
-        """
-        poll_data = {
+
+class Indented(RawText):
+    """
+    An indented Text subtype content block with the given content.
+
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
+
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "indented", **kwargs)
+
+
+class Chat(RawText):
+    """
+    A chat Text subtype content block with the given content.
+
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
+
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "chat", **kwargs)
+
+
+class OrderedListItem(RawText):
+    """
+    An ordered-list-item Text subtype content block with the given
+    content.
+
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
+
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "ordered-list-item", **kwargs)
+
+
+class UnorderedListItem(RawText):
+    """
+    An unordered-list-item Text subtype content block with the given
+    content.
+
+    See: https://www.tumblr.com/docs/npf#content-block-type-text
+    """
+
+    def __init__(self, content: str, **kwargs):
+        super().__init__(content, "unordered-list-item", **kwargs)
+
+
+class OrderedList(MultiBlock):
+    """
+    A list of ordered-list-item Text subtype content blocks with the
+    given items in the content list. Passes all kwargs onto each
+    individual list item.
+    """
+
+    def __init__(self, items: list[str], **kwargs):
+        self.items = [OrderedListItem(item, **kwargs) for item in items]
+
+    def data(self):
+        yield from (item.data() for item in self.items)
+
+
+class UnorderedList(MultiBlock):
+    """
+    A list of unordered-list-item Text subtype content blocks with the
+    given items in the content list. Passes all kwargs onto each
+    individual list item.
+    """
+
+    def __init__(self, items: list[str], **kwargs):
+        self.items = [UnorderedListItem(item, **kwargs) for item in items]
+
+    def data(self):
+        yield from (item.data() for item in self.items)
+
+
+class Poll(ContentBlock):
+    """
+    A poll content block.
+    This is not officially documented yet so who knows if it's going to
+    change!
+
+    .. note::
+        - expire_after is clamped between 1 and 7 days serverside
+        - Only one poll can be in each post and this is enforced serverside
+        - At least 2 and at most 12 options can be provided each having a
+          max of 80 characters.
+
+    :param question: The Poll prompt
+    :param options: The poll options
+    :param expire_after: a time delta of when the poll will close
+        (default 7 days)
+    """
+
+    def __init__(
+          self,
+          question: str,
+          options: Iterable[str],
+          *,
+          expire_after: timedelta = timedelta(days=7),
+    ):
+        self.question = question
+        self.options = options
+        self.expire_after = expire_after
+
+    def data(self) -> Mapping:
+        return {
             "type": "poll",
-            "question": question,
+            "question": self.question,
             # must be provided in request but are now ignored
             "client_id": str(uuid4()),
             "answers": [
                 {"answer_text": answer, "client_id": str(uuid4())}
-                for answer in options
+                for answer in self.options
             ],
             'settings': {
                 'close_status': 'closed-after',
-                'expire_after': expire_after.total_seconds(),
-                'multiple_choice': False,
+                'expire_after': int(self.expire_after.total_seconds()),
             },
         }
-        self.blocks.append(poll_data)
-        self._display.append(_block(self._idx))
-        return self
 
-    def image(
-            self,
-            path: PurePath | str,
-            img_type: str,
-            alt_text: str,
-            caption: str = None
-    ) -> Self:
-        """
-        An Image block.
 
-        See: https://www.tumblr.com/docs/npf#content-block-type-image
+class Image(DataBlock):
+    """
+    An Image block.
 
-        :param path: The path to the image
-        :param img_type: The image MIME type
-        :param alt_text: Image Alt Text
-        :param caption: Optional Caption (display under image when viewed)
-        """
-        fid = self._next_fid
-        file = open(path, "rb")
-        self.files[fid] = (fid, file, img_type)
-        data = {
+    See: https://www.tumblr.com/docs/npf#content-block-type-image
+
+    :param path: The path to the image
+    :param img_type: The image MIME type
+    :param alt_text: Image Alt Text
+    :param caption: Optional Caption (displayed under image when viewed)
+    """
+
+    def __init__(
+          self,
+          path: PurePath | str,
+          img_type: str,
+          alt_text: str,
+          caption: str = None,
+    ):
+        super().__init__(path, img_type)
+        self.alt_text = alt_text
+        self.caption = caption
+
+    def data(self) -> Mapping:
+        return {
             "type": "image",
-            "media": [{"type": img_type, "identifier": fid}],
-            "alt_text": alt_text,
-            "caption": caption,
+            "media": [{"type": self.mime_type, "identifier": self.fid}],
+            "alt_text": self.alt_text,
+            "caption": self.caption,
         }
-        self.blocks.append(data)
-        self._display.append(_block(self._idx))
-        return self
-
-    def read_more(self) -> Self:
-        """
-        Inserts a "keep reading" bar that truncates the post.
-
-        See: https://www.tumblr.com/docs/npf#read-more
-
-        :raises ValueError: if a read more has already been inserted into the
-            content
-        """
-        if "truncate_after" in self._rows:
-            raise ValueError("Only one read more per post :(")
-        else:
-            self._rows["truncate_after"] = self._idx
-        return self
-
-    def row_of(self, *image_data: Mapping[str, str] | Iterable[str]) -> Self:
-        """
-        Creates a row of images.
-
-        :param image_data: either a mapping of image param names to values, or
-            an iterable of the image params.
-        """
-        blocks = []
-        for image in image_data:
-            if isinstance(image, Mapping):
-                self.image(**image)
-            else:
-                self.image(*image)
-            blocks.append(self._display.pop()["blocks"][0])
-        self._display.append(_block(blocks))
-        return self
 
 
-def _row_layout():
-    return {
-        "type": "rows",
-        "display": []
-    }
+class ReadMore(Block):
+    """
+    Inserts a "keep reading" bar that truncates the post.
+    Only one can be added per post.
+
+    See: https://www.tumblr.com/docs/npf#read-more
+    """
 
 
-def _block(idx):
-    return {
-        "blocks": [idx] if isinstance(idx, int) else idx
-    }
+class Row(Block):
+    """
+    Creates a row of images.
+
+    :param images: varargs of Image blocks.
+    """
+    def __init__(self, *images: Image):
+        self.images = images
+
+    def data(self) -> Iterable[Mapping]:
+        yield from (image.data() for image in self.images)
