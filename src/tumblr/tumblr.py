@@ -18,6 +18,20 @@ __all__ = ["Tumblr", "zip_poll_with_results", "get_polls_from_post"]
 
 
 class Tumblr:
+    """
+    Nyaa!! OwO what's this? \*glomps you\*
+
+    This is a supppper duper cool and awesome tumblr class!!1 It handles
+    all sorts of heckin awesome things like authentication, posting,
+    getting post info, and rebloging posts!
+
+    :param blog: The name of the blog (one you have auth for)
+    :param client_key: AKA Consumer Key
+    :param client_secret: AKA Consumer Secret
+    :param oauth_key: AKA Token
+    :param oauth_secret: AKA Token Secret
+    """
+
     _BASE_URL = "https://api.tumblr.com/v2"
 
     def __init__(
@@ -28,19 +42,6 @@ class Tumblr:
           oauth_key: str,
           oauth_secret: str,
     ):
-        """
-        Nyaa!! OwO what's this? \*glomps you\*
-
-        This is a supppper duper cool and awesome tumblr class!!1 It handles
-        all sorts of heckin awesome things like authentication, posting,
-        getting post info, and rebloging posts!
-
-        :param blog: The name of the blog (one you have auth for)
-        :param client_key: AKA Consumer Key
-        :param client_secret: AKA Consumer Secret
-        :param oauth_key: AKA Token
-        :param oauth_secret: AKA Token Secret
-        """
         self.blog = blog
         self._auth = OAuth1(client_key, client_secret, oauth_key, oauth_secret)
 

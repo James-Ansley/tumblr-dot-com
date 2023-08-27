@@ -33,22 +33,28 @@ __all__ = [
 
 
 class Block(abc.ABC):
-    ...
+    """Abstract base class of content blocks"""
 
 
 class ContentBlock(Block, abc.ABC):
+    """Abstract base class of normal text content blocks"""
+
     @abc.abstractmethod
     def data(self) -> Mapping:
-        ...
+        """The data associated with this block"""
 
 
 class MultiBlock(Block, abc.ABC):
+    """Abstract base class of container blocks"""
+
     @abc.abstractmethod
     def data(self) -> Iterable[Mapping]:
-        ...
+        """The data associated with this block's children"""
 
 
 class DataBlock(Block, abc.ABC):
+    """Abstract base class of content blocks that link to data"""
+
     def __init__(self, path: PurePath | str, mime_type: str):
         self.path = path
         self.mime_type = mime_type
@@ -61,6 +67,8 @@ class DataBlock(Block, abc.ABC):
 
 
 class RawText(ContentBlock):
+    """Raw text block - creates text with the specified subtype"""
+
     def __init__(self, content: str, subtype: str, **kwargs):
         self.content = content
         self.subtype = subtype
@@ -81,6 +89,7 @@ class Text(ContentBlock):
 
     See: https://www.tumblr.com/docs/npf#content-block-type-text
     """
+
     def __init__(self, content: str, **kwargs):
         self.content = content
         self.kwargs = kwargs
@@ -304,6 +313,7 @@ class Row(Block):
 
     :param images: varargs of Image blocks.
     """
+
     def __init__(self, *images: Image):
         self.images = images
 
