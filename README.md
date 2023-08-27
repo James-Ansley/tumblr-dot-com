@@ -10,6 +10,10 @@ An unofficial Tumblr API client. Includes support for polls.
 pip install tumblrdotcom
 ```
 
+## Docs
+
+https://tumblr-dot-com.rtfd.io
+
 ## Usage
 
 ### Example

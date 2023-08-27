@@ -20,6 +20,7 @@ dynamic = ["dependencies"]
 
 [project.urls]
 repository = "https://github.com/James-Ansley/tumblr-dot-com"
+documentation = "https://tumblr-dot-com.rtfd.io"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
