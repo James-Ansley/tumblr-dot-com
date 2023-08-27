@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0]
+
+### Changes
+
+- Complete rewrite, see documentation
+- Content blocks are now standalone
+
+### BugFixes
+
+- Fixes broken poll posting
+
 ## [0.1.1]
 
 ### BugFixes
@@ -23,5 +34,8 @@ In a minor bump? Yes. Because tumblr changed how the Polls API works
 - Only one `Content.poll` block can be added per post. However, polls can still
   be added to reblogs even if the post being reblogged contains a poll.
 
+[0.2.0]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.1.1...v0.2.0
+
 [0.1.1]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.1.0...v0.1.1
+
 [0.1.0]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.0.1...v0.1.0
