@@ -26,7 +26,7 @@ initialised with the current user blog, and Oauth1 tokens, for example using
 ::
 
     import os
-    
+
     from dotenv import load_dotenv
     from tumblr import *
 

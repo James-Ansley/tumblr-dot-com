@@ -25,6 +25,7 @@ __all__ = [
     "UnorderedListItem",
     "OrderedList",
     "UnorderedList",
+    "Indented",
     "Poll",
     "Image",
     "ReadMore",
