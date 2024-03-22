@@ -74,6 +74,16 @@ class Tumblr:
           limit: int = 20,
           post_format: str = "HTML",
     ):
+        """
+        Retrieves posts with the given tag.
+
+        See: https://www.tumblr.com/docs/en/api/v2#tagged-method
+
+        :param tag: the search tag
+        :param before: shows posts from before this timestamp
+        :param limit: Number of posts to get (between 1–20)
+        :param post_format: HTML, plain, or raw.
+        """
         return self._get(
             f"{BASE_URL}/tagged",
             params={
@@ -145,30 +155,90 @@ class User(Tumblr):
     """
 
     def info(self):
+        """
+        Returns general information about the user.
+
+        See: https://www.tumblr.com/docs/en/api/v2#userinfo--get-a-users-information
+        """
         return self._get(url=f"{USER_URL}/info")
 
     def limits(self):
+        """
+        Returns general information about the user limits (posts, sideblogs,
+        etc.)
+
+        See: https://www.tumblr.com/docs/en/api/v2#userlimits--get-a-users-limits
+        """
         return self._get(f"{USER_URL}/limits")
 
     def dashboard(self):
+        """
+        Retrieves the user's dashboard
+
+        See: https://www.tumblr.com/docs/en/api/v2#userdashboard--retrieve-a-users-dashboard
+
+        .. seealso::
+            https://www.tumblr.com/docs/en/api_agreement
+        """
         return self._get(f"{USER_URL}/dashboard")
 
     def likes(self):
+        """
+        Retrieves the post liked by the user
+
+        See: https://www.tumblr.com/docs/en/api/v2#userlikes--retrieve-a-users-likes
+        """
         return self._get(f"{USER_URL}/likes")
 
     def following(self):
+        """
+        Retrieves the blogs the user is following
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfollowing--retrieve-the-blogs-a-user-is-following
+        """
         return self._get(f"{USER_URL}/following")
 
     def follow(self, url: str):
+        """
+        Follows a blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfollow--follow-a-blog
+
+        :param url: The URL of the blog (can also be a blog name, e.g. "staff")
+        """
         return self._post(f"{USER_URL}/follow", body={"url": url})
 
     def follow_email(self, email: str):
+        """
+        Follows a blog by email address. A blog is only followable by email
+        if it has the ``Let people find your blogs through this address.``
+        setting enabled on tumblr.com/settings/account.
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfollow--follow-a-blog
+
+        :param email: The email of the user to follow
+        """
         return self._post(f"{USER_URL}/follow", body={"email": email})
 
     def unfollow(self, url: str):
+        """
+        Unfollows a blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#userunfollow--unfollow-a-blog
+
+        :param url: The URL of the blog (can also be a blog name, e.g. "staff")
+        """
         return self._post(f"{USER_URL}/unfollow", body={"url": url})
 
-    def like(self, post_id, from_blog):
+    def like(self, post_id: str, from_blog: str):
+        """
+        Likes a post
+
+        See: https://www.tumblr.com/docs/en/api/v2#userlike--like-a-post
+
+        :param post_id: The ID of the post to like
+        :param from_blog: The blog name of the blog that made the post
+        """
         parent_post = self.get_post(post_id, from_blog)
         return self._post(
             f"{USER_URL}/like",
@@ -178,7 +248,15 @@ class User(Tumblr):
             }
         )
 
-    def unlike(self, post_id, from_blog):
+    def unlike(self, post_id: str, from_blog: str):
+        """
+        Unlikes a post
+
+        See: https://www.tumblr.com/docs/en/api/v2#userunlike--unlike-a-post
+
+        :param post_id: The ID of the post to like
+        :param from_blog: The blog name of the blog that made the post
+        """
         parent_post = self.get_post(post_id, from_blog)
         return self._post(
             f"{USER_URL}/unlike",
@@ -189,35 +267,101 @@ class User(Tumblr):
         )
 
     def filtered_tags(self):
+        """
+        Retrieves the user's filtered tags
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_tags---tag-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+        """
         return self._get(f"{USER_URL}/filtered_tags")
 
     def add_filtered_tags(self, tags: list[str]):
+        """
+        Adds the given tags to the user's filtered tags
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_tags---tag-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+
+        :param tags: The tags to add to the filtered tags
+        """
         return self._post(
             f"{USER_URL}/filtered_tags",
             body={"filtered_tags": tags}
         )
 
     def remove_filtered_tag(self, tag: str):
+        """
+        Removes the given tag from the user's filtered tags
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_tags---tag-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+
+        :param tag: the tag to be removed
+        """
         return self._delete(f"{USER_URL}/filtered_tags/{quote_plus(tag)}")
 
     def filtered_content(self):
+        """
+        Retrieves the user's list of filtered content
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_content---content-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+        """
         return self._get(f"{USER_URL}/filtered_content")
 
     def add_filtered_content(self, filtered_content: str | list[str]):
+        """
+        Adds the given filtered content to the user's filtered content
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_content---content-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+
+        :param filtered_content: one or more string to add to the
+            filtered content
+        """
         return self._post(
             f"{USER_URL}/filtered_content",
             body={"filtered_content": filtered_content}
         )
 
     def remove_filtered_content(self, filtered_content: str):
+        """
+        Removes the given content from the user's filtered content
+
+        See: https://www.tumblr.com/docs/en/api/v2#userfiltered_content---content-filtering
+
+        .. seealso::
+            https://help.tumblr.com/hc/en-us/articles/115015814708-Tag-and-Post-Content-Filtering
+
+        :param filtered_content: a string to remove from the filtered content
+        """
         return self._delete(
             f"{USER_URL}/filtered_content",
             params={"filtered_content": filtered_content}
         )
 
     def get_post(
-          self, post_id: str, from_blog: str, post_format: str = "npf"
+          self, post_id: str, from_blog: str, post_format: str = "npf",
     ) -> StrMap:
+        """
+        Retrieves a post
+
+        See: https://www.tumblr.com/docs/en/api/v2#postspost-id---fetching-a-post-neue-post-format
+
+        :param post_id: The ID of the post
+        :param from_blog: The blog name of the blog that made the post
+        :param post_format: The format to retrieve content: npf or legacy
+        """
         return self._get(
             url=f"{BLOG_URL}/{from_blog}/posts/{post_id}",
             params={"post_format": post_format},
