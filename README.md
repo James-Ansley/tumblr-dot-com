@@ -24,7 +24,7 @@ from pprint import pprint
 
 from tumblr import *
 
-tumblr = Tumblr(
+tumblr = Blog(
     blog="pizza",  # or 'pizza.tumblr.com'
     client_key=os.getenv("CONSUMER_KEY"),
     client_secret=os.getenv("CONSUMER_SECRET"),
