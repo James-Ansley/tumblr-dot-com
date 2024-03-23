@@ -8,6 +8,7 @@ from datetime import timedelta
 from io import BytesIO
 from pathlib import PurePath
 from uuid import uuid4
+from pprint import PrettyPrinter
 
 __all__ = [
     "Block",
@@ -35,6 +36,10 @@ __all__ = [
 
 class Block(abc.ABC):
     """Abstract base class of content blocks"""
+
+    def __repr__(self):
+        values = ', '.join(f"{k}={v!r}" for k, v in self.__dict__.items())
+        return f"{type(self).__name__}({values})"
 
 
 class ContentBlock(Block, abc.ABC):
@@ -320,3 +325,27 @@ class Row(Block):
 
     def data(self) -> Iterable[Mapping]:
         yield from (image.data() for image in self.images)
+
+
+# noinspection PyUnresolvedReferences,PyProtectedMember,PyMethodMayBeStatic
+class _BlockPrettyPrinter(PrettyPrinter):
+    """
+    Pretty printer for Doc and Section objects.
+
+    Note: The output of this pretty printer is used in approval tests to
+    check Markdown document structure.
+    """
+
+    def _pprint_block(self, obj, stream, indent, *args):
+        stream.write(f"{type(obj).__name__}(")
+        indent += (len(type(obj).__name__) + 1)
+        items = iter(obj.__dict__.items())
+        k, v = next(items)
+        stream.write(f"{k}=")
+        self._format(v, stream, indent + len(k) + 1, *args)
+        for k, v in items:
+            stream.write(f"\n{' ' * indent}{k}=")
+            self._format(v, stream, indent + len(k) + 1, *args)
+        stream.write(f")")
+
+    PrettyPrinter._dispatch[Block.__repr__] = _pprint_block

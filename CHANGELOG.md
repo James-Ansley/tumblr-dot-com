@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1]
+
+### Additions
+
+- Content blocks can now be pretty printed and have default repr methods
+
 ## [0.3.0]
 
 ### Changes
@@ -38,6 +44,8 @@ All notable changes to this project will be documented in this file.
   days serverside.
 - Only one `Content.poll` block can be added per post. However, polls can still
   be added to reblogs even if the post being reblogged contains a poll.
+
+[0.3.1]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.3.0...v0.3.1
 
 [0.3.0]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.2.0...v0.3.0
 
