@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0]
+
+### Changes
+
+- Complete rewrite for Tumblr API wrappers, see documentation.
+  All documented API routes are now supported.
+
 ## [0.2.0]
 
 ### Changes
@@ -15,7 +22,7 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.1]
 
-### BugFixes
+### Bug Fixes
 
 - `Tumblr.reblog` now takes `to_blog` parameter instead of incorrectly
   using `from_blog` as the target blog.
@@ -24,8 +31,6 @@ All notable changes to this project will be documented in this file.
 
 ### Breaking Changes
 
-In a minor bump? Yes. Because tumblr changed how the Polls API works
-
 - `Content.poll` no longer takes `option_uuids` or `poll_uuid` parameters. While
   these are still required in the request, they seem to be ignored and
   regenerated serverside.
@@ -33,6 +38,8 @@ In a minor bump? Yes. Because tumblr changed how the Polls API works
   days serverside.
 - Only one `Content.poll` block can be added per post. However, polls can still
   be added to reblogs even if the post being reblogged contains a poll.
+
+[0.3.0]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.2.0...v0.3.0
 
 [0.2.0]: https://github.com/James-Ansley/tumblr-dot-com/compare/v0.1.1...v0.2.0
 

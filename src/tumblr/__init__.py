@@ -1,6 +1,5 @@
 """
-This is like, totally the most sugoi and kawaii way to interact with Tumblr's
-super cool API.
+Provides classes to interact with blogs, and create post content.
 """
 
 from .tumblr import Tumblr, User, Blog

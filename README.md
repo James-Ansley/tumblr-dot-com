@@ -1,8 +1,7 @@
 # Tumblr-Dot-Com
 
-> OwO What's this?! Nyaa!!1
-
-An unofficial Tumblr API client. Includes support for polls.
+An unofficial Tumblr API client.
+Includes support for creating polls and retrieving poll results.
 
 ## Install
 

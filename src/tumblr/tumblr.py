@@ -1,9 +1,14 @@
+"""
+Provides Tumblr, User, and Blog classes for interacting with various API
+endpoints outlined in the Tumblr API documentation:
+https://www.tumblr.com/docs/en/api/v2
+"""
+
 import json
 from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from io import StringIO
-from pprint import pprint
 from types import MappingProxyType
 from typing import Any, Mapping
 from urllib.parse import quote_plus
@@ -24,15 +29,6 @@ OPTIONAL_BLOG_FIELDS = (
 )
 
 StrMap = Mapping[str, Any]
-
-
-def blog_fields(fields):
-    fields = [
-        f"?{field}" if field in OPTIONAL_BLOG_FIELDS else field
-        for field in fields
-    ]
-    return {"fields[blogs]": ",".join(fields)} if fields else {}
-
 
 BASE_URL = "https://api.tumblr.com/v2"
 BLOG_URL = f"{BASE_URL}/blog"
@@ -401,6 +397,11 @@ class Blog(Tumblr):
         * /posts/{post-id}/mute - Muting a Post's Notifications
         * /notes - Get notes for a specific Post
 
+    Also includes support for undocumented Poll APIs:
+        * /polls/{blog}/{post_id}/{poll_id}/results
+
+    See the :meth:`poll_results` and :meth:`raw_poll_results` methods
+
     :param blog: The name of the blog (one you have auth for)
     :param client_key: AKA Consumer Key
     :param client_secret: AKA Consumer Secret
@@ -420,34 +421,107 @@ class Blog(Tumblr):
         self.blog = blog
 
     def info(self, fields: Iterable[str] = ()) -> StrMap:
+        """
+        Retrieves information about the blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#info---retrieve-blog-info
+
+        :param fields: optional additional info fields that can be requested
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/info",
             params=blog_fields(fields),
         )
 
-    def avatar(self, size=64) -> bytes:
+    def avatar(self, size: int = 64) -> bytes:
+        """
+        Retrieves the blog's avatar
+
+        See: https://www.tumblr.com/docs/en/api/v2#avatar--retrieve-a-blog-avatar
+
+        :param size: The nxn size of the image to download. Must be one of:
+            16, 24, 30, 40, 48, 64, 96, 128, 512
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get_raw(url=f"{BLOG_URL}/{self.blog}/avatar/{size}")
 
-    def blocks(self, offset=0, limit=20, fields: Iterable[str] = ()) -> StrMap:
+    def blocks(
+          self, offset: int = 0, limit: int = 20, fields: Iterable[str] = (),
+    ) -> StrMap:
+        """
+        Retrieves this blog's blocked blogs
+
+        See: https://www.tumblr.com/docs/en/api/v2#blocks--retrieve-blogs-blocks
+
+        :param offset: The blocked blog number to start at
+        :param limit: The number of blocked blogs to retrieve
+            (between 1–20 inclusive)
+        :param fields: Blog fields of the blocked blog to retrieve
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/blocks",
             params={"offset": offset, "limit": limit, **blog_fields(fields)},
         )
 
     def block(self, tumblelog: str = None, post_id: str = None) -> StrMap:
+        """
+        Blocks the specified blog or poster of the given ID
+
+        See: https://www.tumblr.com/docs/en/api/v2#blocks--block-a-blog
+
+        :param tumblelog: The blog identifier of the blog to block
+        :param post_id: The post id of a post posted by the blog to block
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         params = {"blocked_tumblelog": tumblelog, "post_id": post_id}
         params = {k: v for k, v in params.items() if v is not None}
         if len(params) != 1:
-            raise ValueError("One of tumblelog or post_id must be given")
+            raise ValueError(
+                "Exactly one of tumblelog or post_id must be given"
+            )
         return self._post(url=f"{BLOG_URL}/{self.blog}/blocks", body=params)
 
     def bulk_block(self, tumblelogs: Iterable, force: bool = False) -> StrMap:
+        """
+        Blocks several blogs at once
+
+        See: https://www.tumblr.com/docs/en/api/v2#blocksbulk--block-a-list-of-blogs
+
+        :param tumblelogs: the blog identifiers of the blogs to block
+        :param force: whether to force the block even if this cancels a Post+
+            subscription
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._post(
             url=f"{BLOG_URL}/{self.blog}/blocks/bulk",
             body={"blocked_tumblelogs": ",".join(tumblelogs), "force": force}
         )
 
     def unblock(self, tumblelog: str = None, anonymous: bool = None) -> StrMap:
+        """
+        Unblocks a blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#blocks--remove-a-block
+
+        :param tumblelog: The blog identifier of the blog to unblock
+        :param anonymous: If tumblelog is not given and this is True, will
+            unblock all anonymous blocks
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         params = {"blocked_tumblelog": tumblelog, "anonymous_only": anonymous}
         params = {k: v for k, v in params.items() if v is not None}
         if len(params) != 1:
@@ -462,6 +536,20 @@ class Blog(Tumblr):
           after: int = None,
           fields: Iterable[str] = (),
     ) -> StrMap:
+        """
+        Retrieves this blogs likes
+
+        See: https://www.tumblr.com/docs/en/api/v2#likes--retrieve-blogs-likes
+
+        :param limit: the number of likes to retrieve
+        :param offset: the liked post to start at
+        :param before: the timestamp of likes to retrieve before
+        :param after: the timestamp of likes to retrieve after
+        :param fields: the blog fields to retrieve with this request
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         params = {"limit": limit, "offset": offset,
                   "before": before, "after": after}
         params = {k: v for k, v in params.items() if v is not None}
@@ -473,18 +561,51 @@ class Blog(Tumblr):
     def following(
           self, limit: int = 20, offset: int = 0, fields: Iterable[str] = ()
     ) -> StrMap:
+        """
+        Retrieves the blogs this blog follows
+
+        See: https://www.tumblr.com/docs/en/api/v2#following--retrieve-blogs-following
+
+        :param limit: the number of blogs to retrieve
+        :param offset: the blog to start at
+        :param fields: the blog fields to retrieve with this request
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/following",
             params={"limit": limit, "offset": offset, **blog_fields(fields)},
         )
 
     def followers(self, limit: int = 20, offset: int = 0) -> StrMap:
+        """
+        Retrieves the users following this blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#followers--retrieve-a-blogs-followers
+
+        :param limit: the number of blogs to retrieve
+        :param offset: the blog number to start at
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/followers",
             params={"limit": limit, "offset": offset},
         )
 
     def followed_by(self, blog: str):
+        """
+        Retrieves the following status of the given blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#followed_by--check-if-followed-by-blog
+
+        :param blog: the blog that may be following this blog
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/followed_by",
             params={"query": blog},
@@ -493,6 +614,18 @@ class Blog(Tumblr):
     def queue(
           self, offset: int = 0, limit: int = 20, post_format: str = "npf",
     ) -> StrMap:
+        """
+        Retrieves the list of currently queued posts
+
+        See: https://www.tumblr.com/docs/en/api/v2#postsqueue--retrieve-queued-posts
+
+        :param offset: the post number to start at
+        :param limit: the number of posts to retrieve
+        :param post_format: the post format: npf, HTML, text, raw
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         fmt = {"npf": True} if post_format == "npf" else {"filter": post_format}
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/posts/queue",
@@ -501,12 +634,33 @@ class Blog(Tumblr):
 
     def reorder_queue(
           self, post_id: str | int, insert_after: str | int = 0) -> StrMap:
+        """
+        Reorders posts in the queue
+
+        See: https://www.tumblr.com/docs/en/api/v2#postsqueuereorder--reorder-queued-posts
+
+        :param post_id: the ID of the post to reorder
+        :param insert_after: the id of the post to insert this post after
+            or 0 to move to the top
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._post(
             url=f"{BLOG_URL}/{self.blog}/posts/queue/reorder",
             body={"post_id": post_id, "insert_after": insert_after}
         )
 
     def shuffle_queue(self):
+        """
+        Randomly shuffles the queue
+
+        See: https://www.tumblr.com/docs/en/api/v2#postsqueueshuffle---shuffle-queued-posts
+
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._post(url=f"{BLOG_URL}/{self.blog}/posts/queue/shuffle")
 
     def posts(
@@ -522,6 +676,26 @@ class Blog(Tumblr):
           before: int = None,
           fields: Iterable[str] = (),
     ) -> StrMap:
+        """
+        Retrieves published posts
+
+        See: https://www.tumblr.com/docs/en/api/v2#posts--retrieve-published-posts
+
+        :param post_type: the type of post to return:
+            text, quote, link, answer, video, audio, photo, chat
+        :param post_id: the ID of a specific post
+        :param tag: one or more tags to filter by
+        :param limit: the number of posts to retrieve
+        :param offset: the post number to start at
+        :param reblog_info: whether to return reblog information
+        :param notes_info: whether to return notes information
+        :param post_format: the post format to return: HTML, text, raw, or npf
+        :param before: retrieves posts before this timestamp
+        :param fields: the blog fields to retrieve
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         params = {
             "post_type": post_type, "post_id": post_id, "tag": tag,
             "limit": limit, "offset": offset, "reblog_info": reblog_info,
@@ -535,9 +709,23 @@ class Blog(Tumblr):
         )
 
     def drafts(
-          self, before_id: int | str = 0, post_format: str = "npf",
+          self,
+          before_id: int | str = 0,
+          post_format: str = "npf",
           fields: Iterable[str] = (),
     ) -> StrMap:
+        """
+        Retrieves drafted posts
+
+        See: https://www.tumblr.com/docs/en/api/v2#postsdraft--retrieve-draft-posts
+
+        :param before_id: gets posts created before the post with the given ID
+        :param post_format: the post format to retrieve: npf, HTML, text, raw
+        :param fields: the blog fields to retrieve
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         fmt = {"npf": True} if post_format == "npf" else {"filter": post_format}
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/posts/draft",
@@ -550,6 +738,18 @@ class Blog(Tumblr):
           post_format: str = "npf",
           fields: Iterable[str] = (),
     ) -> StrMap:
+        """
+        Retrieves post submissions
+
+        See: https://www.tumblr.com/docs/en/api/v2#postssubmission--retrieve-submission-posts
+
+        :param offset: the post offset
+        :param post_format: the post format to retrieve: npf, HTML, text, raw
+        :param fields: the blog fields to retrieve
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         fmt = {"npf": True} if post_format == "npf" else {"filter": post_format}
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/posts/submission",
@@ -563,6 +763,19 @@ class Blog(Tumblr):
           rollups: bool = None,
           omit_post_ids: Iterable[str] = None,
     ) -> StrMap:
+        """
+        Retrieves the blog's activity feed
+
+        See: https://www.tumblr.com/docs/en/api/v2#notifications--retrieve-blogs-activity-feed
+
+        :param before: a timestamp to retrieve notifications before
+        :param types: one or more notification types to filter by (see API docs)
+        :param rollups: whether similar activity should be grouped
+        :param omit_post_ids: an array of post IDs to omit
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         params = {"before": before, "types": types,
                   "rollups": rollups, "omit_post_ids": omit_post_ids}
         params = {k: v for k, v in params.items() if v is not None}
@@ -574,6 +787,19 @@ class Blog(Tumblr):
     def get_post(
           self, post_id: str, from_blog: str = None, post_format: str = "npf",
     ) -> StrMap:
+        """
+        Retrieves a specific post
+
+        See: https://www.tumblr.com/docs/en/api/v2#postspost-id---fetching-a-post-neue-post-format
+
+        :param post_id: the ID of the desired post
+        :param from_blog: the blog that made the post
+            (the current blog if not provided)
+        :param post_format: the post format to retrieve: npf, HTML, text, raw
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{from_blog or self.blog}/posts/{post_id}",
             params={"post_format": post_format},
@@ -592,6 +818,30 @@ class Blog(Tumblr):
           slug: str = None,
           interactability_reblog: str = None,
     ) -> StrMap:
+        """
+        Creates a new post
+
+        See: https://www.tumblr.com/docs/en/api/v2#posts---createreblog-a-post-neue-post-format
+
+        :param content: the content blocks of the post's body
+        :param state: the state to post in:
+            published, queue, draft, private, unapproved
+        :param publish_on: if the publish-state is "queue", will use this
+            ISO 8601 format timestamp as the publish date
+        :param date: the ISO 8601 format datetime to backdate the post
+        :param tags: an iterable of tags to give the post
+        :param source_url: a source attribution for the post content
+        :param send_to_twitter: whether to share this post to a connected
+            Twitter account
+        :param is_private: whether the post, if it is an answer,
+            should be a private
+        :param slug: Custom URL for the post
+        :param interactability_reblog: who can interact with this post:
+            everyone, or noone
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         content = _process_blocks(content)
         params = {
             "content": content.blocks,
@@ -627,6 +877,32 @@ class Blog(Tumblr):
           slug: str = None,
           interactability_reblog: str = None,
     ):
+        """
+        Creates a reblog
+
+        See: https://www.tumblr.com/docs/en/api/v2#posts---createreblog-a-post-neue-post-format
+
+        :param from_id: the post ID to reblog
+        :param content: the content blocks of the post's body
+        :param from_blog: the blog that made the reblogged post
+        :param state: the state to post in:
+            published, queue, draft, private, unapproved
+        :param publish_on: if the publish-state is "queue", will use this
+            ISO 8601 format timestamp as the publish date
+        :param date: the ISO 8601 format datetime to backdate the post
+        :param tags: an iterable of tags to give the post
+        :param source_url: a source attribution for the post content
+        :param send_to_twitter: whether to share this post to a connected
+            Twitter account
+        :param is_private: whether the post, if it is an answer,
+            should be a private
+        :param slug: Custom URL for the post
+        :param interactability_reblog: who can interact with this post:
+            everyone, or noone
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         parent_post = self.get_post(from_id, from_blog)
         content = _process_blocks(content)
         params = {
@@ -666,6 +942,31 @@ class Blog(Tumblr):
           slug: str = None,
           interactability_reblog: str = None,
     ):
+        """
+        Edits an existing post
+
+        See: https://www.tumblr.com/docs/en/api/v2#postspost-id---editing-a-post-neue-post-format
+
+        :param post_id: the ID of the post to edit (posted by the current blog)
+        :param content: the content blocks of the post's body
+        :param state: the state to post in:
+            published, queue, draft, private, unapproved
+        :param publish_on: if the publish-state is "queue", will use this
+            ISO 8601 format timestamp as the publish date
+        :param date: the ISO 8601 format datetime to backdate the post
+        :param tags: an iterable of tags to give the post
+        :param source_url: a source attribution for the post content
+        :param send_to_twitter: whether to share this post to a connected
+            Twitter account
+        :param is_private: whether the post, if it is an answer,
+            should be a private
+        :param slug: Custom URL for the post
+        :param interactability_reblog: who can interact with this post:
+            everyone, or noone
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         post = self.get_post(post_id)["response"]
         content = _process_blocks(content) if content is not None else None
         params = {
@@ -688,7 +989,6 @@ class Blog(Tumblr):
         params = {k: v for k, v in params.items() if k in post}
         post = {k: v for k, v in post.items() if k in params}
         params = {k: v for k, v in params.items() if v is not None}
-        pprint(post | params)
         return self._put(
             url=f"{BLOG_URL}/{self.blog}/posts/{post_id}",
             params=post | params,
@@ -696,24 +996,71 @@ class Blog(Tumblr):
         )
 
     def delete_post(self, post_id: str | int) -> StrMap:
+        """
+        Deletes a post posted by this blog
+
+        See: https://www.tumblr.com/docs/en/api/v2#postdelete--delete-a-post
+
+        :param post_id: the ID of the post to delete
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._delete(
             url=f"{BLOG_URL}/{self.blog}/post/delete",
             params={"id": post_id},
         )
 
     def mute_post(
-          self, post_id: str | int, mute_length_seconds: int = 0) -> StrMap:
+          self,
+          post_id: str | int,
+          mute_length_seconds: int = 0,
+    ) -> StrMap:
+        """
+        Mutes notifications for a post
+
+        See: https://www.tumblr.com/docs/en/api/v2#postspost-idmute---muting-a-posts-notifications
+
+        :param post_id: the ID of the post to mute
+        :param mute_length_seconds: the time the post should remain muted
+            (0 for forever)
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._post(
             url=f"{BLOG_URL}/{self.blog}/posts/{post_id}/mute",
             body={"mute_length_seconds": mute_length_seconds},
         )
 
     def unmute_post(self, post_id: str | int) -> StrMap:
+        """
+        Unmutes the notifications for a post
+
+        See: https://www.tumblr.com/docs/en/api/v2#postspost-idmute---muting-a-posts-notifications
+
+        :param post_id: the ID of the post to unmute
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._delete(url=f"{BLOG_URL}/{self.blog}/posts/{post_id}/mute")
 
     def notes(
           self, post_id: str | int, before: int = None, mode: str = "all",
     ) -> StrMap:
+        """
+        Retrieves the notes for a specific post
+
+        See: https://www.tumblr.com/docs/en/api/v2#notes---get-notes-for-a-specific-post
+
+        :param post_id: the ID of the post
+        :param before: the timestamp in seconds to retrieve notes before
+        :param mode: the type of note to retrieve (see API docs)
+        :return: The JSON encoded response
+
+        :raises HTTPError: if the request fails
+        """
         return self._get(
             url=f"{BLOG_URL}/{self.blog}/notes",
             params={"id": post_id, "before_timestamp": before, "mode": mode}
@@ -725,14 +1072,12 @@ class Blog(Tumblr):
           blog: str = None,
     ) -> StrMap:
         """
-        (OWO) !! What's this? Poll results!
-
         Returns a poll object zipped with answer text. Finds the first poll
         in the given post and returns its results + labels
 
         :param post_id: The post that contains the poll
         :param blog: The blog for the post – defaults to the blog given to the
-            tumblr object
+            Blog object
         :return: The JSON encoded response
 
         :raises HTTPError: if the request fails
@@ -753,8 +1098,6 @@ class Blog(Tumblr):
           blog: str = None,
     ) -> StrMap:
         """
-        (OWO) !! Whats this? Poll results!
-
         Not defined in the API yet – seems to return a mapping of answer
         client_ids to the votes for each answer.
 
@@ -851,3 +1194,11 @@ def _process_blocks(blocks: Iterable[Block]) -> _Content:
         layout=[layout],
         files=files,
     )
+
+
+def blog_fields(fields):
+    fields = [
+        f"?{field}" if field in OPTIONAL_BLOG_FIELDS else field
+        for field in fields
+    ]
+    return {"fields[blogs]": ",".join(fields)} if fields else {}

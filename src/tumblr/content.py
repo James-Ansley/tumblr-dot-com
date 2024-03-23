@@ -1,5 +1,5 @@
 """
-OwO !! What's this?! A sugoi way to make post content UwU Nyah!
+Provides several content blocks to make up post bodies
 """
 
 import abc
@@ -224,13 +224,13 @@ class UnorderedList(MultiBlock):
 class Poll(ContentBlock):
     """
     A poll content block.
-    This is not officially documented yet so who knows if it's going to
+    This is not officially documented yet, so who knows if it's going to
     change!
 
     .. note::
-        - expire_after is clamped between 1 and 7 days serverside
-        - Only one poll can be in each post and this is enforced serverside
-        - At least 2 and at most 12 options can be provided each having a
+        * expire_after is clamped between 1 and 7 days serverside
+        * Only one poll can be in each post and this is enforced serverside
+        * At least 2 and at most 12 options can be provided each having a
           max of 80 characters.
 
     :param question: The Poll prompt
@@ -254,10 +254,10 @@ class Poll(ContentBlock):
         return {
             "type": "poll",
             "question": self.question,
-            # must be provided in request but are now ignored
+            # client_id must be provided in request but is now ignored by Tumblr
             "client_id": str(uuid4()),
             "answers": [
-                {"answer_text": answer, "client_id": str(uuid4())}
+                {"answer_text": answer}
                 for answer in self.options
             ],
             'settings': {

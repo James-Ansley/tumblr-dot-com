@@ -9,13 +9,6 @@
 
    
    
-   .. rubric:: Functions
-
-   .. autosummary::
-   
-      get_polls_from_post
-      zip_poll_with_results
-   
    
 
    
@@ -25,6 +18,8 @@
    .. autosummary::
    
       Tumblr
+      User
+      Blog
    
    
 

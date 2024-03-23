@@ -18,25 +18,25 @@
    .. autosummary::
    
       Block
-      Chat
       ContentBlock
-      Cursive
-      DataBlock
-      Heading
-      Image
-      Indented
       MultiBlock
-      OrderedList
-      OrderedListItem
-      Poll
-      Quote
+      DataBlock
       RawText
+      Text
+      Heading
+      Subheading
+      Cursive
+      Quote
+      Chat
+      OrderedListItem
+      UnorderedListItem
+      OrderedList
+      UnorderedList
+      Indented
+      Poll
+      Image
       ReadMore
       Row
-      Subheading
-      Text
-      UnorderedList
-      UnorderedListItem
    
    
 
